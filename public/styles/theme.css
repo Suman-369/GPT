@@ -1,0 +1,49 @@
+/* Light Theme (Default) */
+:root {
+  --primary-bg: #f6f8fa;
+  --primary-color: #1a1a1a;
+  --accent: #2563eb;
+  --accent-hover: #1742a0;
+  --input-bg: #fff;
+  --input-border: #d1d5db;
+  --input-focus: #2563eb33;
+  --border-radius: 10px;
+  --transition: 0.18s cubic-bezier(.4,0,.2,1);
+  --font-family: 'Inter', Arial, sans-serif;
+  --label-color: #555;
+  --form-bg: #fff;
+  --shadow: 0 2px 16px 0 rgba(0,0,0,0.06);
+  --error: #e53e3e;
+}
+
+/* Dark Theme */
+.dark-theme {
+  --primary-bg: #181a1b;
+  --primary-color: #f3f4f6;
+  --accent: #4f8cff;
+  --accent-hover: #2563eb;
+  --input-bg: #23272f;
+  --input-border: #333a44;
+  --input-focus: #4f8cff33;
+  --label-color: #b0b8c1;
+  --form-bg: #23272f;
+  --shadow: 0 2px 16px 0 rgba(0,0,0,0.18);
+  --error: #ff6b6b;
+}
+
+/* System preference fallback */
+@media (prefers-color-scheme: dark) {
+  :root:not(.light-theme) {
+    --primary-bg: #181a1b;
+    --primary-color: #f3f4f6;
+    --accent: #4f8cff;
+    --accent-hover: #2563eb;
+    --input-bg: #23272f;
+    --input-border: #333a44;
+    --input-focus: #4f8cff33;
+    --label-color: #b0b8c1;
+    --form-bg: #23272f;
+    --shadow: 0 2px 16px 0 rgba(0,0,0,0.18);
+    --error: #ff6b6b;
+  }
+}
