@@ -4,8 +4,18 @@ function setupSocketServer(httpServer){
     const io = new Server(httpServer,{})
 
 
-    io.on("connected",(socket)=>{
-        console.log("A USer Connected");
+    io.on("connection",(socket)=>{
+        console.log("A User Connected");
+
+
+        socket.on("ai-message",(message)=>{
+            console.log(message);
+            
+        })
+        socket.on("disconnect",()=>{
+            console.log("A user Disconnect");
+            
+        })
         
     })
 }

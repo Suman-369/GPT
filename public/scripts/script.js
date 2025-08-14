@@ -1,3 +1,6 @@
+
+
+
 // Theme Toggle and Chat Functionality
 document.addEventListener('DOMContentLoaded', function() {
     const themeToggle = document.getElementById('themeToggle') || document.getElementById('theme-toggle');
@@ -5,10 +8,16 @@ document.addEventListener('DOMContentLoaded', function() {
     const html = document.documentElement;
     const body = document.body;
     const mobileMenuToggle = document.getElementById('mobileMenuToggle');
+    const sidebarToggle = document.getElementById('sidebarToggle');
+    const sidebarToggleIcon = document.getElementById('sidebarToggleIcon');
     const sidebar = document.querySelector('.sidebar');
+    const sidebarBackdrop = document.getElementById('sidebarBackdrop');
     const tryPlusBtn = document.querySelector('.try-plus-button .upgrade-btn');
     const chatInput = document.getElementById('chatInput');
     const chatMessages = document.getElementById('chatMessages');
+    const sendBtn = document.getElementById('sendBtn');
+    const chatContainer = document.querySelector('.chat-container');
+    const welcomeMessage = document.getElementById('welcomeMessage');
 
     // Check for saved theme preference or default to system preference
     const savedTheme = localStorage.getItem('theme');
@@ -68,19 +77,76 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
+    // Sidebar toggle functionality (desktop)
+    if (sidebarToggle) {
+        sidebarToggle.addEventListener('click', function() {
+            sidebar.classList.toggle('collapsed');
+            
+            // Update icon based on state
+            if (sidebar.classList.contains('collapsed')) {
+                sidebarToggleIcon.className = 'fas fa-bars';
+                sidebarToggle.title = 'Expand sidebar';
+            } else {
+                sidebarToggleIcon.className = 'fas fa-times';
+                sidebarToggle.title = 'Collapse sidebar';
+            }
+            
+            // Save state to localStorage
+            localStorage.setItem('sidebarCollapsed', sidebar.classList.contains('collapsed'));
+        });
+    }
+
     // Mobile menu toggle functionality
-    mobileMenuToggle.addEventListener('click', function() {
-        sidebar.classList.toggle('open');
-    });
+    if (mobileMenuToggle) {
+        mobileMenuToggle.addEventListener('click', function() {
+            sidebar.classList.toggle('open');
+            
+            // Update mobile menu icon
+            const mobileIcon = mobileMenuToggle.querySelector('i');
+            if (sidebar.classList.contains('open')) {
+                mobileIcon.className = 'fas fa-times';
+                mobileMenuToggle.title = 'Close menu';
+                // Show backdrop
+                if (sidebarBackdrop) {
+                    sidebarBackdrop.style.display = 'block';
+                    setTimeout(() => sidebarBackdrop.classList.add('active'), 10);
+                }
+            } else {
+                mobileIcon.className = 'fas fa-bars';
+                mobileMenuToggle.title = 'Open menu';
+                // Hide backdrop
+                if (sidebarBackdrop) {
+                    sidebarBackdrop.classList.remove('active');
+                    setTimeout(() => sidebarBackdrop.style.display = 'none', 300);
+                }
+            }
+        });
+    }
 
     // Close sidebar when clicking outside on mobile
     document.addEventListener('click', function(event) {
         if (window.innerWidth <= 768) {
             const isClickInsideSidebar = sidebar.contains(event.target);
-            const isClickOnMobileToggle = mobileMenuToggle.contains(event.target);
+            const isClickOnMobileToggle = mobileMenuToggle && mobileMenuToggle.contains(event.target);
+            const isClickOnBackdrop = sidebarBackdrop && sidebarBackdrop.contains(event.target);
             
-            if (!isClickInsideSidebar && !isClickOnMobileToggle && sidebar.classList.contains('open')) {
-                sidebar.classList.remove('open');
+            if ((!isClickInsideSidebar && !isClickOnMobileToggle) || isClickOnBackdrop) {
+                if (sidebar.classList.contains('open')) {
+                    sidebar.classList.remove('open');
+                    
+                    // Reset mobile menu icon
+                    if (mobileMenuToggle) {
+                        const mobileIcon = mobileMenuToggle.querySelector('i');
+                        mobileIcon.className = 'fas fa-bars';
+                        mobileMenuToggle.title = 'Open menu';
+                    }
+                    
+                    // Hide backdrop
+                    if (sidebarBackdrop) {
+                        sidebarBackdrop.classList.remove('active');
+                        setTimeout(() => sidebarBackdrop.style.display = 'none', 300);
+                    }
+                }
             }
         }
     });
@@ -88,9 +154,42 @@ document.addEventListener('DOMContentLoaded', function() {
     // Handle window resize
     window.addEventListener('resize', function() {
         if (window.innerWidth > 768) {
+            // On desktop, remove mobile open state
             sidebar.classList.remove('open');
+            
+            // Reset mobile menu icon
+            if (mobileMenuToggle) {
+                const mobileIcon = mobileMenuToggle.querySelector('i');
+                mobileIcon.className = 'fas fa-bars';
+                mobileMenuToggle.title = 'Open menu';
+            }
+            
+            // Hide backdrop
+            if (sidebarBackdrop) {
+                sidebarBackdrop.classList.remove('active');
+                sidebarBackdrop.style.display = 'none';
+            }
+        } else {
+            // On mobile, remove collapsed state
+            sidebar.classList.remove('collapsed');
+            
+            // Reset sidebar toggle icon
+            if (sidebarToggleIcon) {
+                sidebarToggleIcon.className = 'fas fa-times';
+                sidebarToggle.title = 'Toggle sidebar';
+            }
         }
     });
+
+    // Load saved sidebar state on page load
+    const savedSidebarState = localStorage.getItem('sidebarCollapsed');
+    if (savedSidebarState === 'true' && window.innerWidth > 768) {
+        sidebar.classList.add('collapsed');
+        if (sidebarToggleIcon) {
+            sidebarToggleIcon.className = 'fas fa-bars';
+            sidebarToggle.title = 'Expand sidebar';
+        }
+    }
 
     // Chat input functionality
     const inputWrapper = document.querySelector('.input-wrapper');
@@ -106,21 +205,79 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // Handle Enter key press
         chatInput.addEventListener('keypress', function(event) {
-            if (event.key === 'Enter') {
-                const message = chatInput.value.trim();
-                if (message) {
-                    // Add user message to chat
-                    addUserMessage(message);
-                    
-                    // Simulate AI response (you can replace this with actual API call)
-                    setTimeout(() => {
-                        addAIResponse(message);
-                    }, 1000);
-                    
-                    chatInput.value = '';
-                }
+            if (event.key === 'Enter' && !event.shiftKey) {
+                event.preventDefault();
+                sendMessage();
             }
         });
+
+        // Send button functionality
+        if (sendBtn) {
+            sendBtn.addEventListener('click', function() {
+                sendMessage();
+            });
+        }
+
+        // Function to send message
+        function sendMessage() {
+            const message = chatInput.value.trim();
+            if (message) {
+                // Disable send button temporarily
+                sendBtn.disabled = true;
+                sendBtn.style.opacity = '0.6';
+                
+                // Add user message to chat
+                socket.emit("ai-message", message);
+                addUserMessage(message);
+                
+                // Clear input
+                chatInput.value = '';
+                
+                // Add has-messages class to move input to bottom and hide welcome message smoothly
+                chatContainer.classList.add('has-messages');
+                // Remove welcome message from DOM so content starts at top
+                if (welcomeMessage && welcomeMessage.parentNode) {
+                    welcomeMessage.parentNode.removeChild(welcomeMessage);
+                }
+                
+                // Simulate AI response (you can replace this with actual API call)
+                setTimeout(() => {
+                    addAIResponse(message);
+                    // Re-enable send button
+                    sendBtn.disabled = false;
+                    sendBtn.style.opacity = '1';
+                }, 1000);
+            }
+        }
+
+            // Auto-resize input field
+    chatInput.addEventListener('input', function() {
+        this.style.height = 'auto';
+        this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+        
+        // Enable/disable send button based on input
+        if (this.value.trim()) {
+            sendBtn.disabled = false;
+            sendBtn.style.opacity = '1';
+        } else {
+            sendBtn.disabled = true;
+            sendBtn.style.opacity = '0.6';
+        }
+    });
+
+    // Enhanced scroll behavior for chat messages
+    chatMessages.addEventListener('scroll', function() {
+        // Add smooth momentum scrolling
+        this.style.scrollBehavior = 'smooth';
+    });
+
+    // Prevent scroll chaining on mobile
+    chatMessages.addEventListener('touchstart', function() {
+        this.style.overscrollBehavior = 'contain';
+    });
+
+      
+        
     }
 
     // Add hover effects to chat items
@@ -274,8 +431,9 @@ function addUserMessage(message) {
         </div>
     `;
     
+    // Add message to the bottom (natural flow)
     chatMessages.appendChild(messageDiv);
-    chatMessages.scrollTop = chatMessages.scrollHeight;
+    smoothScrollToBottom();
 }
 
 function addAIResponse(userMessage) {
@@ -287,9 +445,48 @@ function addAIResponse(userMessage) {
     
     messageDiv.innerHTML = response;
     
+    // Add AI response to the bottom (natural flow)
     chatMessages.appendChild(messageDiv);
-    chatMessages.scrollTop = chatMessages.scrollHeight;
+    smoothScrollToBottom();
 }
+
+// Enhanced smooth scrolling function
+function smoothScrollToBottom() {
+    const scrollTarget = chatMessages.scrollHeight - chatMessages.clientHeight;
+    
+    // Use smooth scrolling with easing
+    chatMessages.scrollTo({
+        top: scrollTarget,
+        behavior: 'smooth'
+    });
+    
+    // Fallback for older browsers
+    if (!('scrollBehavior' in document.documentElement.style)) {
+        const start = chatMessages.scrollTop;
+        const change = scrollTarget - start;
+        const duration = 500;
+        let startTime = null;
+        
+        function animateScroll(currentTime) {
+            if (startTime === null) startTime = currentTime;
+            const timeElapsed = currentTime - startTime;
+            const progress = Math.min(timeElapsed / duration, 1);
+            
+            // Easing function (ease-out cubic)
+            const easeOut = 1 - Math.pow(1 - progress, 3);
+            
+            chatMessages.scrollTop = start + change * easeOut;
+            
+            if (timeElapsed < duration) {
+                requestAnimationFrame(animateScroll);
+            }
+        }
+        
+        requestAnimationFrame(animateScroll);
+    }
+}
+
+
 
 function generateAIResponse(userMessage) {
     const lowerMessage = userMessage.toLowerCase();
