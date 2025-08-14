@@ -9,7 +9,7 @@
 </head>
 <body>
         <div class="auth-container">
-            <form class="auth-form" method="POST" action="/register" autocomplete="off">
+            <form class="auth-form" method="POST" action="/auth/register" autocomplete="off">
                 <div class="theme-toggle-wrap">
                     <button type="button" id="theme-toggle" aria-label="Toggle theme" title="Switch theme">
                         <span id="theme-icon">🌙</span>
@@ -17,6 +17,10 @@
                 </div>
                 <h1>Create your account</h1>
                 <p class="form-desc">Sign up to get started. It's quick and easy!</p>
+                <div class="form-group">
+                    <label for="name">Your Name</label>
+                    <input type="text" id="name" name="name" required placeholder="Your name" autocomplete="name" />
+                </div>
                 <div class="form-group">
                     <label for="email">Email address</label>
                     <input type="email" id="email" name="email" required placeholder="you@email.com" autocomplete="email" />

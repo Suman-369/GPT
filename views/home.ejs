@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ChatGPT Clone</title>
+    <link rel="stylesheet" href="/styles/theme.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="dark-theme">
+    <!-- Try Plus Button -->
+    <div class="try-plus-button">
+        <button class="upgrade-btn">
+            <i class="fas fa-star"></i>
+            <span>Try Plus</span>
+        </button>
+    </div>
+
+    <!-- Main Container -->
+    <div class="app-container">
+        <!-- Left Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">
+                    <div class="logo-icon">
+                        <div class="logo-sphere"></div>
+                    </div>
+                    <span class="logo-text">ChatGPT</span>
+                </div>
+                <button class="theme-toggle-btn" id="themeToggle" title="Toggle theme">
+                    <i class="fas fa-sun light-icon"></i>
+                    <i class="fas fa-moon dark-icon"></i>
+                </button>
+            </div>
+
+            <nav class="sidebar-nav">
+                <button class="nav-item new-chat">
+                    <i class="fas fa-plus"></i>
+                    <span>New chat</span>
+                </button>
+                
+                <div class="nav-section">
+                    <button class="nav-item">
+                        <i class="fas fa-search"></i>
+                        <span>Search chats</span>
+                    </button>
+                    <button class="nav-item">
+                        <i class="fas fa-book"></i>
+                        <span>Library</span>
+                    </button>
+                    <button class="nav-item">
+                        <i class="fas fa-play"></i>
+                        <span>Sora</span>
+                    </button>
+                    <button class="nav-item">
+                        <i class="fas fa-th"></i>
+                        <span>GPTs</span>
+                    </button>
+                    <button class="nav-item">
+                        <i class="fas fa-magic"></i>
+                        <span>Website Generator</span>
+                    </button>
+                </div>
+
+                <div class="chats-section">
+                    <h3>Chats</h3>
+                    <div class="chat-list">
+                        <div class="chat-item">
+                            <i class="fas fa-comment"></i>
+                            <span>Fix ABAP code</span>
+                        </div>
+                        <div class="chat-item">
+                            <i class="fas fa-comment"></i>
+                            <span>Fix report variant issue</span>
+                        </div>
+                        <div class="chat-item">
+                            <i class="fas fa-comment"></i>
+                            <span>Fix ABAP syntax error</span>
+                        </div>
+                        <div class="chat-item">
+                            <i class="fas fa-comment"></i>
+                            <span>SAP সফটওয়্যার ব্যাখ্যা</span>
+                        </div>
+                        <div class="chat-item">
+                            <i class="fas fa-comment"></i>
+                            <span>Building block of OPPD</span>
+                        </div>
+                        <div class="chat-item">
+                            <i class="fas fa-comment"></i>
+                            <span>OOP principles explanation</span>
+                        </div>
+                        <div class="chat-item">
+                            <i class="fas fa-comment"></i>
+                            <span>Stock price inquiry</span>
+                        </div>
+                        <div class="chat-item">
+                            <i class="fas fa-comment"></i>
+                            <span>Fix port 3000 error</span>
+                        </div>
+                        <div class="chat-item">
+                            <i class="fas fa-comment"></i>
+                            <span>Refactor to multiple files</span>
+                        </div>
+                        <div class="chat-item">
+                            <i class="fas fa-comment"></i>
+                            <span>Fix CSS code</span>
+                        </div>
+                        <div class="chat-item">
+                            <i class="fas fa-comment"></i>
+                            <span>Chat app UI prompt</span>
+                        </div>
+                        <div class="chat-item">
+                            <i class="fas fa-comment"></i>
+                            <span>Frontend design prompt</span>
+                        </div>
+                        <div class="chat-item">
+                            <i class="fas fa-comment"></i>
+                            <span>Explain API error fix</span>
+                        </div>
+                        <div class="chat-item">
+                            <i class="fas fa-comment"></i>
+                            <span>Add node modules to aitianore</span>
+                        </div>
+                    </div>
+                </div>
+            </nav>
+
+            <div class="sidebar-footer">
+                <div class="user-profile">
+                    <div class="profile-pic">
+                        <i class="fas fa-user"></i>
+                    </div>
+                    <div class="user-info">
+                        <span class="username">suman Kar</span>
+                        <span class="account-type">Free</span>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="main-content">
+            <div class="chat-container">
+                <!-- Chat Messages Container -->
+                <div class="chat-messages" id="chatMessages">
+                    <!-- Messages will be dynamically added here -->
+                </div>
+
+                <!-- Input Area -->
+                <div class="input-container">
+                    <div class="input-wrapper">
+                        <button class="input-btn attachment-btn">
+                            <i class="fas fa-plus"></i>
+                        </button>
+                        <div class="input-field">
+                            <input type="text" placeholder="Ask anything" class="chat-input" id="chatInput">
+                        </div>
+                        <button class="input-btn voice-btn">
+                            <i class="fas fa-microphone"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Mobile Menu Toggle -->
+    <button class="mobile-menu-toggle" id="mobileMenuToggle">
+        <i class="fas fa-bars"></i>
+    </button>
+
+    <script src="/scripts/script.js"></script>
+</body>
+</html>
