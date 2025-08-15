@@ -244,9 +244,42 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
 
+        // Fast progressive streaming support
+        let assemblingMessage = '';
+        socket.on("ai-message-response-start", () => {
+            assemblingMessage = '';
+            // pre-create a message bubble to stream into
+            const chatMessagesEl = document.getElementById('chatMessages');
+            const wrapper = document.createElement('div');
+            wrapper.className = 'message ai streaming';
+            wrapper.innerHTML = `<div class="ai-message"><div class="ai-message-text" id="streaming-text"></div></div>`;
+            chatMessagesEl.appendChild(wrapper);
+        });
+        socket.on("ai-message-response-chunk", ({ text }) => {
+            assemblingMessage += text;
+            const target = document.getElementById('streaming-text');
+            if (target) {
+                target.textContent = assemblingMessage;
+                smoothScrollToBottom();
+            }
+        });
+        socket.on("ai-message-response-end", () => {
+            // Replace streaming bubble with rich rendered content
+            const target = document.getElementById('streaming-text');
+            if (target) {
+                const streamingWrapper = target.parentElement.parentElement; // .message.ai.streaming
+                streamingWrapper.remove();
+            }
+            addAITextMessage(assemblingMessage);
+            assemblingMessage = '';
+            if (sendBtn) {
+                sendBtn.disabled = false;
+                sendBtn.style.opacity = '1';
+            }
+        });
         socket.on("ai-message-response", (message) => {
+            // Fallback for non-streaming
             addAITextMessage(message);
-            // Re-enable send button after receiving server response
             if (sendBtn) {
                 sendBtn.disabled = false;
                 sendBtn.style.opacity = '1';
@@ -455,9 +488,9 @@ function addAITextMessage(text) {
     if (!chatMessagesEl) return;
     const messageDiv = document.createElement('div');
     messageDiv.className = 'message ai';
+    const rendered = renderMarkdownRich(String(text));
     messageDiv.innerHTML = `
-        <div class="ai-message">
-            <div class="ai-message-text">${escapeHtml(String(text))}</div>
+        <div class="ai-message">${rendered}
             <div class="message-actions">
                 <button class="action-btn" title="Thumbs up"><i class="fas fa-thumbs-up"></i></button>
                 <button class="action-btn" title="Thumbs down"><i class="fas fa-thumbs-down"></i></button>
@@ -469,7 +502,89 @@ function addAITextMessage(text) {
         </div>
     `;
     chatMessagesEl.appendChild(messageDiv);
+    enhanceCodeBlocks(messageDiv);
     smoothScrollToBottom(chatMessagesEl);
+}
+
+// Render markdown and transform <pre><code> into styled code blocks with header, language and actions
+function renderMarkdownRich(markdownText) {
+    try {
+        if (typeof marked !== 'undefined') {
+            marked.setOptions({ mangle: false, headerIds: false, breaks: true });
+            const raw = marked.parse(markdownText);
+            const safe = typeof DOMPurify !== 'undefined' ? DOMPurify.sanitize(raw) : raw;
+            // Wrap non-code paragraphs with .ai-message-text for better spacing
+            const container = document.createElement('div');
+            container.innerHTML = safe;
+            // Convert code blocks to custom layout
+            container.querySelectorAll('pre > code').forEach(codeEl => {
+                const pre = codeEl.parentElement;
+                const languageMatch = (codeEl.className || '').match(/language-([\w#+-]+)/i);
+                const lang = languageMatch ? languageMatch[1] : 'text';
+                const codeText = codeEl.textContent;
+                const wrapper = document.createElement('div');
+                wrapper.className = 'code-block';
+                wrapper.innerHTML = `
+                    <div class="code-header">
+                        <span class="code-language">${lang}</span>
+                        <div class="code-actions">
+                            <button class="code-action-btn copy-btn" title="Copy">Copy</button>
+                            <button class="code-action-btn edit-btn" title="Edit">Edit</button>
+                        </div>
+                    </div>
+                    <div class="code-content"><pre><code class="language-${lang}">${escapeHtml(codeText)}</code></pre></div>
+                `;
+                pre.replaceWith(wrapper);
+            });
+            // Add class to regular paragraphs
+            container.querySelectorAll('p, h1, h2, h3, h4, h5, h6, ul, ol, blockquote').forEach(el => {
+                if (!el.closest('.code-block')) {
+                    el.classList.add('ai-message-text');
+                }
+            });
+            return container.innerHTML;
+        }
+    } catch (e) {
+        console.error('Markdown render error', e);
+    }
+    // Fallback to escaped plain text
+    return `<div class="ai-message-text">${escapeHtml(markdownText)}</div>`;
+}
+
+// Attach handlers for Copy/Edit on code blocks
+function enhanceCodeBlocks(scopeEl) {
+    const root = scopeEl || document;
+    root.querySelectorAll('.code-block').forEach(block => {
+        const copyBtn = block.querySelector('.copy-btn');
+        const editBtn = block.querySelector('.edit-btn');
+        const codeContainer = block.querySelector('.code-content');
+        // Apply syntax highlighting if hljs is present
+        try {
+            if (typeof hljs !== 'undefined') {
+                codeContainer.querySelectorAll('pre code').forEach(code => hljs.highlightElement(code));
+            }
+        } catch (_) {}
+        if (copyBtn) {
+            copyBtn.addEventListener('click', async () => {
+                const text = codeContainer.innerText;
+                try {
+                    await navigator.clipboard.writeText(text);
+                    const prev = copyBtn.textContent;
+                    copyBtn.textContent = 'Copied!';
+                    setTimeout(() => (copyBtn.textContent = prev), 1200);
+                } catch (_) {}
+            });
+        }
+        if (editBtn) {
+            editBtn.addEventListener('click', () => {
+                const pre = codeContainer.querySelector('pre');
+                const isEditable = pre.getAttribute('contenteditable') === 'true';
+                pre.setAttribute('contenteditable', isEditable ? 'false' : 'true');
+                pre.focus();
+                editBtn.textContent = isEditable ? 'Edit' : 'Done';
+            });
+        }
+    });
 }
 
 // Enhanced smooth scrolling function

@@ -727,8 +727,13 @@ body {
   font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
   font-size: 14px;
   line-height: 1.5;
-  color: #ff6b6b;
+  color: #e5e7eb;
   overflow-x: auto;
+}
+
+.code-content pre {
+  margin: 0;
+  white-space: pre;
 }
 
 /* Message Actions */
