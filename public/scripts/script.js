@@ -219,6 +219,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         // Function to send message
+        let lastUserMessage = "";
         function sendMessage() {
             const message = chatInput.value.trim();
             if (message) {
@@ -227,6 +228,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 sendBtn.style.opacity = '0.6';
                 
                 // Add user message to chat
+                lastUserMessage = message;
                 socket.emit("ai-message", message);
                 addUserMessage(message);
                 
@@ -244,46 +246,27 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
 
-        // Fast progressive streaming support
-        let assemblingMessage = '';
-        socket.on("ai-message-response-start", () => {
-            assemblingMessage = '';
-            // pre-create a message bubble to stream into
-            const chatMessagesEl = document.getElementById('chatMessages');
-            const wrapper = document.createElement('div');
-            wrapper.className = 'message ai streaming';
-            wrapper.innerHTML = `<div class="ai-message"><div class="ai-message-text" id="streaming-text"></div></div>`;
-            chatMessagesEl.appendChild(wrapper);
-        });
-        socket.on("ai-message-response-chunk", ({ text }) => {
-            assemblingMessage += text;
-            const target = document.getElementById('streaming-text');
-            if (target) {
-                target.textContent = assemblingMessage;
-                smoothScrollToBottom();
-            }
-        });
-        socket.on("ai-message-response-end", () => {
-            // Replace streaming bubble with rich rendered content
-            const target = document.getElementById('streaming-text');
-            if (target) {
-                const streamingWrapper = target.parentElement.parentElement; // .message.ai.streaming
-                streamingWrapper.remove();
-            }
-            addAITextMessage(assemblingMessage);
-            assemblingMessage = '';
-            if (sendBtn) {
-                sendBtn.disabled = false;
-                sendBtn.style.opacity = '1';
-            }
-        });
         socket.on("ai-message-response", (message) => {
-            // Fallback for non-streaming
-            addAITextMessage(message);
-            if (sendBtn) {
-                sendBtn.disabled = false;
-                sendBtn.style.opacity = '1';
+            const text = String(message || '');
+            const isCodeQuery = isProgrammingQuery(lastUserMessage || '') || containsCodeLike(text);
+            if (isCodeQuery) {
+                addAITextMessage(text);
+                if (sendBtn) {
+                    sendBtn.disabled = false;
+                    sendBtn.style.opacity = '1';
+                }
+                return;
             }
+            // Render with typewriter effect for non-programming messages
+            addAITypewriterMessage(text, {
+                charsPerSecond: 1000,
+                onDone: () => {
+                    if (sendBtn) {
+                        sendBtn.disabled = false;
+                        sendBtn.style.opacity = '1';
+                    }
+                }
+            });
         });
 
             // Auto-resize input field
@@ -305,12 +288,62 @@ document.addEventListener('DOMContentLoaded', function() {
     chatMessages.addEventListener('scroll', function() {
         // Add smooth momentum scrolling
         this.style.scrollBehavior = 'smooth';
+        
+        // Show/hide scroll to bottom button
+        const scrollToBottomBtn = document.getElementById('scrollToBottomBtn');
+        const isAtBottom = this.scrollTop + this.clientHeight >= this.scrollHeight - 10;
+        
+        if (scrollToBottomBtn) {
+            if (isAtBottom) {
+                scrollToBottomBtn.style.display = 'none';
+            } else {
+                scrollToBottomBtn.style.display = 'block';
+            }
+        }
     });
 
     // Prevent scroll chaining on mobile
     chatMessages.addEventListener('touchstart', function() {
         this.style.overscrollBehavior = 'contain';
     });
+    
+    // Create scroll to bottom button
+    const scrollToBottomBtn = document.createElement('button');
+    scrollToBottomBtn.id = 'scrollToBottomBtn';
+    scrollToBottomBtn.innerHTML = '<i class="fas fa-chevron-down"></i>';
+    scrollToBottomBtn.title = 'Scroll to bottom';
+    scrollToBottomBtn.className = 'scroll-to-bottom-btn';
+    scrollToBottomBtn.style.cssText = `
+        position: fixed;
+        bottom: 100px;
+        right: 20px;
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        background: var(--accent);
+        color: white;
+        border: none;
+        cursor: pointer;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        z-index: 1000;
+        display: none;
+        transition: all 0.3s ease;
+        font-size: 18px;
+    `;
+    
+    scrollToBottomBtn.addEventListener('click', function() {
+        smoothScrollToBottom(chatMessages);
+    });
+    
+    scrollToBottomBtn.addEventListener('mouseenter', function() {
+        this.style.transform = 'scale(1.1)';
+    });
+    
+    scrollToBottomBtn.addEventListener('mouseleave', function() {
+        this.style.transform = 'scale(1)';
+    });
+    
+    document.body.appendChild(scrollToBottomBtn);
 
       
         
@@ -468,7 +501,7 @@ function addUserMessage(message) {
         </div>
     `;
     chatMessagesEl.appendChild(messageDiv);
-    smoothScrollToBottom(chatMessagesEl);
+    // Don't auto-scroll for user messages - let user control the view
 }
 
 function addAIResponse(userMessage) {
@@ -503,7 +536,94 @@ function addAITextMessage(text) {
     `;
     chatMessagesEl.appendChild(messageDiv);
     enhanceCodeBlocks(messageDiv);
-    smoothScrollToBottom(chatMessagesEl);
+    // Show scroll to bottom button if user is not at bottom
+    const scrollToBottomBtn = document.getElementById('scrollToBottomBtn');
+    const isAtBottom = chatMessagesEl.scrollTop + chatMessagesEl.clientHeight >= chatMessagesEl.scrollHeight - 10;
+    if (scrollToBottomBtn && !isAtBottom) {
+        scrollToBottomBtn.style.display = 'block';
+    }
+}
+
+// Heuristics to detect programming/code-related queries from the user
+function isProgrammingQuery(text) {
+    const t = String(text || '').toLowerCase();
+    const keywords = [
+        'code', 'snippet', 'program', 'programming', 'algorithm', 'function', 'class', 'method', 'bug', 'error', 'stack trace', 'compile', 'build', 'run',
+        'java', 'javascript', 'typescript', 'python', 'node', 'npm', 'yarn', 'pnpm', 'react', 'vue', 'angular', 'svelte', 'next.js', 'nuxt', 'express', 'nest', 'django', 'flask',
+        'spring', 'laravel', 'php', 'ruby', 'rails', 'go', 'golang', 'rust', 'c++', 'c#', 'dotnet', '.net', 'swift', 'kotlin', 'android', 'ios',
+        'html', 'css', 'scss', 'tailwind', 'bootstrap', 'sql', 'postgres', 'mysql', 'sqlite', 'mongodb', 'prisma', 'orm', 'sequelize',
+        'json', 'yaml', 'yml', 'xml', 'regex', 'shell', 'bash', 'powershell', 'zsh', 'cmd', 'cli', 'docker', 'kubernetes', 'k8s',
+        'import', 'export', 'module', 'package', 'library', 'framework', 'api', 'sdk'
+    ];
+    return keywords.some(k => t.includes(k));
+}
+
+// Heuristics to detect whether a text looks like it contains code or code blocks
+function containsCodeLike(text) {
+    const s = String(text || '');
+    if (/```/.test(s)) return true; // fenced code blocks
+    if (/<pre[\s>]|<code[\s>]/i.test(s)) return true; // html code blocks
+    if (/(^|\n)\s{0,3}(const|let|var|function|class|import|export)\b/.test(s)) return true; // js/ts
+    if (/(^|\n)\s{0,3}(def|lambda|async\s+def|print\()\b/.test(s)) return true; // python
+    if (/(^|\n)\s{0,3}(public|private|protected)\s+(static\s+)?(class|void|int|String|List|Map)\b/.test(s)) return true; // java/c#-like
+    if (/^\s*#include\b/m.test(s)) return true; // c/c++
+    if (/(;\s*$|\{\s*$|=>)/m.test(s)) return true; // common code tokens
+    if (/^\s*(SELECT|INSERT|UPDATE|DELETE)\b/mi.test(s)) return true; // sql
+    if (/^\s*<\/?[a-z][^>]*>/mi.test(s) && /<\/[^>]+>/i.test(s)) return true; // html tags
+    return false;
+}
+
+// Add an AI message with a typewriter effect, then upgrade to rich markdown when done
+function addAITypewriterMessage(fullText, options) {
+    const chatMessagesEl = document.getElementById('chatMessages');
+    if (!chatMessagesEl) return;
+    const opts = options || {};
+    const charsPerSecond = typeof opts.charsPerSecond === 'number' && opts.charsPerSecond > 0 ? opts.charsPerSecond : 60;
+    const onDone = typeof opts.onDone === 'function' ? opts.onDone : null;
+
+    const messageDiv = document.createElement('div');
+    messageDiv.className = 'message ai';
+    const contentDiv = document.createElement('div');
+    contentDiv.className = 'ai-message';
+    const textDiv = document.createElement('div');
+    textDiv.className = 'ai-message-text';
+    contentDiv.appendChild(textDiv);
+    messageDiv.appendChild(contentDiv);
+    chatMessagesEl.appendChild(messageDiv);
+
+    const safeText = String(fullText || '');
+    let index = 0;
+    let lastScrollTime = 0;
+    const minScrollIntervalMs = 50;
+    const tickMs = Math.max(8, Math.floor(1000 / charsPerSecond));
+
+    const typeTick = () => {
+        if (index >= safeText.length) {
+            // Replace with rich markdown and actions
+            const rendered = renderMarkdownRich(safeText);
+            contentDiv.innerHTML = `${rendered}\n<div class="message-actions">\n    <button class="action-btn" title="Thumbs up"><i class="fas fa-thumbs-up"></i></button>\n    <button class="action-btn" title="Thumbs down"><i class="fas fa-thumbs-down"></i></button>\n    <button class="action-btn" title="Speak"><i class="fas fa-volume-up"></i></button>\n    <button class="action-btn" title="Edit"><i class="fas fa-edit"></i></button>\n    <button class="action-btn" title="Share"><i class="fas fa-share"></i></button>\n    <button class="action-btn" title="Refresh"><i class="fas fa-redo"></i></button>\n</div>`;
+            enhanceCodeBlocks(contentDiv);
+            // Don't auto-scroll when typewriter effect is done - let user read from top to bottom
+            if (onDone) onDone();
+            return;
+        }
+        // Append next chunk
+        const nextIndex = Math.min(index + 1, safeText.length);
+        // Use textContent to avoid injecting HTML while typing
+        textDiv.textContent = safeText.slice(0, nextIndex);
+        index = nextIndex;
+        const now = Date.now();
+        if (now - lastScrollTime > minScrollIntervalMs) {
+            // Only scroll during typing if user is near the bottom
+            const isNearBottom = chatMessagesEl.scrollTop + chatMessagesEl.clientHeight >= chatMessagesEl.scrollHeight - 100;
+            if (isNearBottom) {
+                smoothScrollToBottom(chatMessagesEl);
+            }
+            lastScrollTime = now;
+        }
+        setTimeout(typeTick, tickMs);
+    };
+    typeTick();
 }
 
 // Render markdown and transform <pre><code> into styled code blocks with header, language and actions
