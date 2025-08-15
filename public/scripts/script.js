@@ -240,15 +240,18 @@ document.addEventListener('DOMContentLoaded', function() {
                     welcomeMessage.parentNode.removeChild(welcomeMessage);
                 }
                 
-                // Simulate AI response (you can replace this with actual API call)
-                setTimeout(() => {
-                    addAIResponse(message);
-                    // Re-enable send button
-                    sendBtn.disabled = false;
-                    sendBtn.style.opacity = '1';
-                }, 1000);
+                // AI response will be handled from server via socket "ai-message-response"
             }
         }
+
+        socket.on("ai-message-response", (message) => {
+            addAITextMessage(message);
+            // Re-enable send button after receiving server response
+            if (sendBtn) {
+                sendBtn.disabled = false;
+                sendBtn.style.opacity = '1';
+            }
+        });
 
             // Auto-resize input field
     chatInput.addEventListener('input', function() {
@@ -422,68 +425,89 @@ document.head.appendChild(activeChatStyle);
 
 // Chat Message Functions
 function addUserMessage(message) {
+    const chatMessagesEl = document.getElementById('chatMessages');
+    if (!chatMessagesEl) return;
     const messageDiv = document.createElement('div');
     messageDiv.className = 'message user';
-    
     messageDiv.innerHTML = `
         <div class="user-message-bubble">
-            ${message}
+            ${escapeHtml(String(message))}
         </div>
     `;
-    
-    // Add message to the bottom (natural flow)
-    chatMessages.appendChild(messageDiv);
-    smoothScrollToBottom();
+    chatMessagesEl.appendChild(messageDiv);
+    smoothScrollToBottom(chatMessagesEl);
 }
 
 function addAIResponse(userMessage) {
+    const chatMessagesEl = document.getElementById('chatMessages');
+    if (!chatMessagesEl) return;
     const messageDiv = document.createElement('div');
     messageDiv.className = 'message ai';
-    
-    // Generate AI response based on user message
     const response = generateAIResponse(userMessage);
-    
     messageDiv.innerHTML = response;
-    
-    // Add AI response to the bottom (natural flow)
-    chatMessages.appendChild(messageDiv);
-    smoothScrollToBottom();
+    chatMessagesEl.appendChild(messageDiv);
+    smoothScrollToBottom(chatMessagesEl);
+}
+
+// Add an AI message using plain text from the server (no manual/generic generation)
+function addAITextMessage(text) {
+    const chatMessagesEl = document.getElementById('chatMessages');
+    if (!chatMessagesEl) return;
+    const messageDiv = document.createElement('div');
+    messageDiv.className = 'message ai';
+    messageDiv.innerHTML = `
+        <div class="ai-message">
+            <div class="ai-message-text">${escapeHtml(String(text))}</div>
+            <div class="message-actions">
+                <button class="action-btn" title="Thumbs up"><i class="fas fa-thumbs-up"></i></button>
+                <button class="action-btn" title="Thumbs down"><i class="fas fa-thumbs-down"></i></button>
+                <button class="action-btn" title="Speak"><i class="fas fa-volume-up"></i></button>
+                <button class="action-btn" title="Edit"><i class="fas fa-edit"></i></button>
+                <button class="action-btn" title="Share"><i class="fas fa-share"></i></button>
+                <button class="action-btn" title="Refresh"><i class="fas fa-redo"></i></button>
+            </div>
+        </div>
+    `;
+    chatMessagesEl.appendChild(messageDiv);
+    smoothScrollToBottom(chatMessagesEl);
 }
 
 // Enhanced smooth scrolling function
-function smoothScrollToBottom() {
-    const scrollTarget = chatMessages.scrollHeight - chatMessages.clientHeight;
-    
-    // Use smooth scrolling with easing
-    chatMessages.scrollTo({
+function smoothScrollToBottom(targetEl) {
+    const chatMessagesEl = targetEl || document.getElementById('chatMessages');
+    if (!chatMessagesEl) return;
+    const scrollTarget = chatMessagesEl.scrollHeight - chatMessagesEl.clientHeight;
+    chatMessagesEl.scrollTo({
         top: scrollTarget,
         behavior: 'smooth'
     });
-    
-    // Fallback for older browsers
     if (!('scrollBehavior' in document.documentElement.style)) {
-        const start = chatMessages.scrollTop;
+        const start = chatMessagesEl.scrollTop;
         const change = scrollTarget - start;
         const duration = 500;
         let startTime = null;
-        
         function animateScroll(currentTime) {
             if (startTime === null) startTime = currentTime;
             const timeElapsed = currentTime - startTime;
             const progress = Math.min(timeElapsed / duration, 1);
-            
-            // Easing function (ease-out cubic)
             const easeOut = 1 - Math.pow(1 - progress, 3);
-            
-            chatMessages.scrollTop = start + change * easeOut;
-            
+            chatMessagesEl.scrollTop = start + change * easeOut;
             if (timeElapsed < duration) {
                 requestAnimationFrame(animateScroll);
             }
         }
-        
         requestAnimationFrame(animateScroll);
     }
+}
+
+// Basic HTML escape to avoid injecting raw HTML from the server into the DOM
+function escapeHtml(unsafe) {
+    return String(unsafe)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
 }
 
 
